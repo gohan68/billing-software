@@ -422,7 +422,18 @@ export default function App() {
               <div className="bg-orange-100 p-3 rounded border border-orange-200 mt-4">
                 <p className="font-medium text-orange-900">Quick SQL Access:</p>
                 <p className="text-xs text-orange-700 mt-1">The SQL file is located at: <code>/app/create-tables.sql</code></p>
-                <p className="text-xs text-orange-700 mt-1">Or check the detailed guide: <code>/app/SETUP_INSTRUCTIONS.md</code></p>
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('/api/setup-sql', '_blank')}
+                    className="bg-white"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    View SQL Script
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
