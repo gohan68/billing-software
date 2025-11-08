@@ -1,45 +1,1130 @@
 'use client'
 
-import { useEffect } from "react";
+import { useState, useEffect } from 'react'
+import { ShoppingCart, Package, Users, FileText, BarChart3, Settings, Plus, Search, X, Trash2, Save, Download, Eye } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import jsPDF from 'jspdf'
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await fetch('/api/');
-      const data = await response.json();
-      console.log(data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+export default function App() {
+  const [currentPage, setCurrentPage] = useState('setup')
+  const [company, setCompany] = useState(null)
+  const [products, setProducts] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [invoices, setInvoices] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState(null)
 
+  // POS State
+  const [cart, setCart] = useState([])
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [searchProduct, setSearchProduct] = useState('')
+  const [paymentMode, setPaymentMode] = useState('Cash')
+
+  // Form states
+  const [showProductForm, setShowProductForm] = useState(false)
+  const [showCustomerForm, setShowCustomerForm] = useState(false)
+  const [showCompanyForm, setShowCompanyForm] = useState(false)
+  
+  const [productForm, setProductForm] = useState({
+    sku: '',
+    name: '',
+    hsn: '',
+    unitPrice: '',
+    purchasePrice: '',
+    stock: '',
+    taxRate: '18'
+  })
+  
+  const [customerForm, setCustomerForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: ''
+  })
+  
+  const [companyForm, setCompanyForm] = useState({
+    name: '',
+    gstin: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    phone: '',
+    email: ''
+  })
+
+  // Load data
   useEffect(() => {
-    helloWorldApi();
-  }, []);
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      // Load company
+      const compRes = await fetch('/api/companies')
+      const companies = await compRes.json()
+      
+      if (companies.length > 0) {
+        const comp = companies[0]
+        setCompany(comp)
+        setCurrentPage('pos')
+        
+        // Load all data
+        const [prodsRes, custsRes, invsRes, statsRes] = await Promise.all([
+          fetch(`/api/products?companyId=${comp.id}`),
+          fetch(`/api/customers?companyId=${comp.id}`),
+          fetch(`/api/invoices?companyId=${comp.id}`),
+          fetch(`/api/dashboard/stats?companyId=${comp.id}`)
+        ])
+        
+        setProducts(await prodsRes.json())
+        setCustomers(await custsRes.json())
+        setInvoices(await invsRes.json())
+        setStats(await statsRes.json())
+      } else {
+        setCurrentPage('setup')
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Company setup
+  const handleCompanySubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(companyForm)
+      })
+      
+      if (res.ok) {
+        const newCompany = await res.json()
+        setCompany(newCompany)
+        setShowCompanyForm(false)
+        setCurrentPage('pos')
+        loadData()
+      }
+    } catch (error) {
+      console.error('Error creating company:', error)
+    }
+  }
+
+  // Product management
+  const handleProductSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...productForm,
+          companyId: company.id,
+          unitPrice: parseFloat(productForm.unitPrice),
+          purchasePrice: parseFloat(productForm.purchasePrice || 0),
+          stock: parseInt(productForm.stock),
+          taxRate: parseFloat(productForm.taxRate)
+        })
+      })
+      
+      if (res.ok) {
+        setShowProductForm(false)
+        setProductForm({
+          sku: '',
+          name: '',
+          hsn: '',
+          unitPrice: '',
+          purchasePrice: '',
+          stock: '',
+          taxRate: '18'
+        })
+        loadData()
+      }
+    } catch (error) {
+      console.error('Error creating product:', error)
+    }
+  }
+
+  // Customer management
+  const handleCustomerSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...customerForm,
+          companyId: company.id
+        })
+      })
+      
+      if (res.ok) {
+        setShowCustomerForm(false)
+        setCustomerForm({
+          name: '',
+          phone: '',
+          email: '',
+          gstin: '',
+          address: '',
+          city: '',
+          state: '',
+          pincode: ''
+        })
+        loadData()
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error)
+    }
+  }
+
+  // POS Functions
+  const addToCart = (product) => {
+    const existing = cart.find(item => item.productId === product.id)
+    
+    if (existing) {
+      setCart(cart.map(item => 
+        item.productId === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ))
+    } else {
+      setCart([...cart, {
+        productId: product.id,
+        productName: product.name,
+        hsn: product.hsn,
+        unitPrice: parseFloat(product.unitPrice),
+        taxRate: parseFloat(product.taxRate),
+        quantity: 1
+      }])
+    }
+  }
+
+  const updateCartQuantity = (productId, quantity) => {
+    if (quantity <= 0) {
+      setCart(cart.filter(item => item.productId !== productId))
+    } else {
+      setCart(cart.map(item => 
+        item.productId === productId 
+          ? { ...item, quantity }
+          : item
+      ))
+    }
+  }
+
+  const removeFromCart = (productId) => {
+    setCart(cart.filter(item => item.productId !== productId))
+  }
+
+  const calculateCartTotal = () => {
+    const subtotal = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
+    const taxAmount = cart.reduce((sum, item) => {
+      const itemSubtotal = item.unitPrice * item.quantity
+      return sum + (itemSubtotal * item.taxRate / 100)
+    }, 0)
+    
+    return {
+      subtotal,
+      taxAmount,
+      total: subtotal + taxAmount
+    }
+  }
+
+  const handleSaveInvoice = async () => {
+    if (cart.length === 0) {
+      alert('Please add items to cart')
+      return
+    }
+    
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: company.id,
+          customerId: selectedCustomer?.id,
+          items: cart,
+          paymentMode,
+          notes: ''
+        })
+      })
+      
+      if (res.ok) {
+        const invoice = await res.json()
+        alert(`Invoice ${invoice.invoiceNo} created successfully!`)
+        
+        // Reset
+        setCart([])
+        setSelectedCustomer(null)
+        setPaymentMode('Cash')
+        loadData()
+      }
+    } catch (error) {
+      console.error('Error creating invoice:', error)
+      alert('Error creating invoice')
+    }
+  }
+
+  const generateInvoicePDF = async (invoiceId) => {
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}`)
+      const invoice = await res.json()
+      
+      const doc = new jsPDF()
+      
+      // Header
+      doc.setFontSize(20)
+      doc.text(invoice.companies.name, 20, 20)
+      doc.setFontSize(10)
+      doc.text(invoice.companies.address, 20, 28)
+      doc.text(`${invoice.companies.city}, ${invoice.companies.state} - ${invoice.companies.pincode}`, 20, 33)
+      doc.text(`GSTIN: ${invoice.companies.gstin}`, 20, 38)
+      doc.text(`Phone: ${invoice.companies.phone}`, 20, 43)
+      
+      // Invoice details
+      doc.setFontSize(16)
+      doc.text('TAX INVOICE', 150, 20)
+      doc.setFontSize(10)
+      doc.text(`Invoice No: ${invoice.invoiceNo}`, 150, 28)
+      doc.text(`Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}`, 150, 33)
+      
+      // Customer details
+      doc.setFontSize(12)
+      doc.text('Bill To:', 20, 55)
+      doc.setFontSize(10)
+      if (invoice.customers) {
+        doc.text(invoice.customers.name, 20, 62)
+        if (invoice.customers.address) doc.text(invoice.customers.address, 20, 67)
+        if (invoice.customers.phone) doc.text(`Phone: ${invoice.customers.phone}`, 20, 72)
+        if (invoice.customers.gstin) doc.text(`GSTIN: ${invoice.customers.gstin}`, 20, 77)
+      } else {
+        doc.text('Walk-in Customer', 20, 62)
+      }
+      
+      // Items table
+      let y = 90
+      doc.setFontSize(9)
+      doc.text('S.No', 15, y)
+      doc.text('Product', 30, y)
+      doc.text('HSN', 90, y)
+      doc.text('Qty', 115, y)
+      doc.text('Rate', 135, y)
+      doc.text('Tax', 155, y)
+      doc.text('Amount', 175, y)
+      
+      y += 5
+      doc.line(15, y, 195, y)
+      y += 5
+      
+      invoice.items.forEach((item, index) => {
+        doc.text(`${index + 1}`, 15, y)
+        doc.text(item.productName, 30, y)
+        doc.text(item.hsn || '-', 90, y)
+        doc.text(item.quantity.toString(), 115, y)
+        doc.text(`₹${item.unitPrice.toFixed(2)}`, 135, y)
+        doc.text(`${item.taxRate}%`, 155, y)
+        doc.text(`₹${item.lineTotal.toFixed(2)}`, 175, y)
+        y += 7
+      })
+      
+      y += 5
+      doc.line(15, y, 195, y)
+      
+      // Totals
+      y += 10
+      doc.text('Subtotal:', 140, y)
+      doc.text(`₹${invoice.subtotal.toFixed(2)}`, 175, y)
+      
+      y += 7
+      if (invoice.cgstAmount > 0) {
+        doc.text('CGST:', 140, y)
+        doc.text(`₹${invoice.cgstAmount.toFixed(2)}`, 175, y)
+        y += 7
+        doc.text('SGST:', 140, y)
+        doc.text(`₹${invoice.sgstAmount.toFixed(2)}`, 175, y)
+      } else {
+        doc.text('IGST:', 140, y)
+        doc.text(`₹${invoice.igstAmount.toFixed(2)}`, 175, y)
+      }
+      
+      y += 7
+      doc.setFontSize(12)
+      doc.text('Total:', 140, y)
+      doc.text(`₹${invoice.totalAmount.toFixed(2)}`, 175, y)
+      
+      // Footer
+      y += 20
+      doc.setFontSize(10)
+      doc.text('Payment Mode: ' + invoice.paymentMode, 20, y)
+      doc.text('Status: ' + invoice.status, 20, y + 7)
+      
+      doc.save(`Invoice_${invoice.invoiceNo}.pdf`)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading BillMaster...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Company Setup Screen
+  if (currentPage === 'setup') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-2xl mx-auto mt-20">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Welcome to BillMaster</CardTitle>
+              <CardDescription>Let's set up your business profile to get started</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCompanySubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Business Name *</label>
+                  <Input
+                    value={companyForm.name}
+                    onChange={(e) => setCompanyForm({...companyForm, name: e.target.value})}
+                    placeholder="Your Shop Name"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">GSTIN</label>
+                    <Input
+                      value={companyForm.gstin}
+                      onChange={(e) => setCompanyForm({...companyForm, gstin: e.target.value})}
+                      placeholder="29ABCDE1234F1Z5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Phone *</label>
+                    <Input
+                      value={companyForm.phone}
+                      onChange={(e) => setCompanyForm({...companyForm, phone: e.target.value})}
+                      placeholder="9876543210"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Email</label>
+                  <Input
+                    type="email"
+                    value={companyForm.email}
+                    onChange={(e) => setCompanyForm({...companyForm, email: e.target.value})}
+                    placeholder="your@email.com"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Address *</label>
+                  <Input
+                    value={companyForm.address}
+                    onChange={(e) => setCompanyForm({...companyForm, address: e.target.value})}
+                    placeholder="Street, Area"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">City *</label>
+                    <Input
+                      value={companyForm.city}
+                      onChange={(e) => setCompanyForm({...companyForm, city: e.target.value})}
+                      placeholder="City"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">State *</label>
+                    <Input
+                      value={companyForm.state}
+                      onChange={(e) => setCompanyForm({...companyForm, state: e.target.value})}
+                      placeholder="State"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Pincode *</label>
+                    <Input
+                      value={companyForm.pincode}
+                      onChange={(e) => setCompanyForm({...companyForm, pincode: e.target.value})}
+                      placeholder="560001"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <Button type="submit" className="w-full" size="lg">
+                  Complete Setup & Start Billing
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  const totals = calculateCartTotal()
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" alt="Emergent" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <h1 className="text-2xl font-bold text-blue-600">BillMaster</h1>
+            <div className="flex gap-2">
+              <Button
+                variant={currentPage === 'pos' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('pos')}
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                POS
+              </Button>
+              <Button
+                variant={currentPage === 'products' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('products')}
+              >
+                <Package className="w-4 h-4 mr-2" />
+                Products
+              </Button>
+              <Button
+                variant={currentPage === 'customers' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('customers')}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Customers
+              </Button>
+              <Button
+                variant={currentPage === 'invoices' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('invoices')}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Invoices
+              </Button>
+              <Button
+                variant={currentPage === 'reports' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('reports')}
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Reports
+              </Button>
+            </div>
+          </div>
+          <div className="text-sm text-gray-600">
+            {company?.name}
+          </div>
+        </div>
+      </nav>
 
-function App() {
-  return (
-    <div className="App">
-      <Home />
+      {/* POS Screen */}
+      {currentPage === 'pos' && (
+        <div className="max-w-7xl mx-auto p-4">
+          {/* Stats */}
+          {stats && (
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600">Today's Sales</div>
+                  <div className="text-2xl font-bold text-green-600">₹{stats.todaySales}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600">Total Invoices</div>
+                  <div className="text-2xl font-bold">{stats.totalInvoices}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600">Products</div>
+                  <div className="text-2xl font-bold">{stats.totalProducts}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600">Customers</div>
+                  <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-6">
+            {/* Product Search & List */}
+            <div className="col-span-2 space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Products</CardTitle>
+                    <Button size="sm" onClick={() => setShowProductForm(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Product
+                    </Button>
+                  </div>
+                  <div className="mt-4">
+                    <Input
+                      placeholder="Search products by name or SKU..."
+                      value={searchProduct}
+                      onChange={(e) => setSearchProduct(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                    {products
+                      .filter(p => 
+                        p.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
+                        p.sku.toLowerCase().includes(searchProduct.toLowerCase())
+                      )
+                      .map(product => (
+                        <button
+                          key={product.id}
+                          onClick={() => addToCart(product)}
+                          className="p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 text-left transition-colors"
+                        >
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-gray-600">{product.sku}</div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-lg font-bold text-blue-600">₹{product.unitPrice}</span>
+                            <Badge variant="secondary">{product.stock} in stock</Badge>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">Tax: {product.taxRate}%</div>
+                        </button>
+                      ))
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Cart & Checkout */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Current Bill</CardTitle>
+                    {cart.length > 0 && (
+                      <Button size="sm" variant="ghost" onClick={() => setCart([])}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Customer Selection */}
+                  <div>
+                    <label className="text-sm font-medium">Customer</label>
+                    <select
+                      className="w-full mt-1 p-2 border rounded"
+                      value={selectedCustomer?.id || ''}
+                      onChange={(e) => {
+                        const cust = customers.find(c => c.id === e.target.value)
+                        setSelectedCustomer(cust)
+                      }}
+                    >
+                      <option value="">Walk-in Customer</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Cart Items */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {cart.length === 0 ? (
+                      <div className="text-center text-gray-400 py-8">
+                        <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>Cart is empty</p>
+                      </div>
+                    ) : (
+                      cart.map((item, idx) => (
+                        <div key={idx} className="border rounded p-2">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{item.productName}</div>
+                              <div className="text-xs text-gray-500">₹{item.unitPrice} × {item.taxRate}% tax</div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeFromCart(item.productId)}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                            >
+                              -
+                            </Button>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateCartQuantity(item.productId, parseInt(e.target.value) || 0)}
+                              className="w-16 text-center"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
+                            <div className="ml-auto font-bold">₹{(item.unitPrice * item.quantity * (1 + item.taxRate/100)).toFixed(2)}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Totals */}
+                  {cart.length > 0 && (
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal:</span>
+                        <span>₹{totals.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tax:</span>
+                        <span>₹{totals.taxAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-lg font-bold border-t pt-2">
+                        <span>Total:</span>
+                        <span className="text-green-600">₹{totals.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Payment Mode */}
+                  {cart.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium">Payment Mode</label>
+                      <select
+                        className="w-full mt-1 p-2 border rounded"
+                        value={paymentMode}
+                        onChange={(e) => setPaymentMode(e.target.value)}
+                      >
+                        <option value="Cash">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Card">Card</option>
+                        <option value="Credit">Credit</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Save Button */}
+                  {cart.length > 0 && (
+                    <Button className="w-full" size="lg" onClick={handleSaveInvoice}>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Invoice
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Products Management */}
+      {currentPage === 'products' && (
+        <div className="max-w-7xl mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Products Management</CardTitle>
+                <Button onClick={() => setShowProductForm(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Product
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">SKU</th>
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">HSN</th>
+                      <th className="text-left p-2">Price</th>
+                      <th className="text-left p-2">Stock</th>
+                      <th className="text-left p-2">Tax Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map(product => (
+                      <tr key={product.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2">{product.sku}</td>
+                        <td className="p-2 font-medium">{product.name}</td>
+                        <td className="p-2">{product.hsn}</td>
+                        <td className="p-2">₹{product.unitPrice}</td>
+                        <td className="p-2">
+                          <Badge variant={product.stock > 10 ? 'secondary' : 'destructive'}>
+                            {product.stock}
+                          </Badge>
+                        </td>
+                        <td className="p-2">{product.taxRate}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Customers Management */}
+      {currentPage === 'customers' && (
+        <div className="max-w-7xl mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Customers Management</CardTitle>
+                <Button onClick={() => setShowCustomerForm(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Customer
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Phone</th>
+                      <th className="text-left p-2">Email</th>
+                      <th className="text-left p-2">GSTIN</th>
+                      <th className="text-left p-2">State</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.map(customer => (
+                      <tr key={customer.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2 font-medium">{customer.name}</td>
+                        <td className="p-2">{customer.phone}</td>
+                        <td className="p-2">{customer.email}</td>
+                        <td className="p-2">{customer.gstin || '-'}</td>
+                        <td className="p-2">{customer.state || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Invoices List */}
+      {currentPage === 'invoices' && (
+        <div className="max-w-7xl mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Invoice No</th>
+                      <th className="text-left p-2">Date</th>
+                      <th className="text-left p-2">Customer</th>
+                      <th className="text-left p-2">Amount</th>
+                      <th className="text-left p-2">Payment</th>
+                      <th className="text-left p-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map(invoice => (
+                      <tr key={invoice.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2 font-medium">{invoice.invoiceNo}</td>
+                        <td className="p-2">{new Date(invoice.invoiceDate).toLocaleDateString()}</td>
+                        <td className="p-2">{invoice.customers?.name || 'Walk-in'}</td>
+                        <td className="p-2 font-bold text-green-600">₹{invoice.totalAmount}</td>
+                        <td className="p-2">
+                          <Badge>{invoice.paymentMode}</Badge>
+                        </td>
+                        <td className="p-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => generateInvoicePDF(invoice.id)}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Reports */}
+      {currentPage === 'reports' && (
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="grid grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span>Today's Sales</span>
+                    <span className="text-xl font-bold text-green-600">₹{stats?.todaySales || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span>Total Invoices</span>
+                    <span className="text-xl font-bold">{stats?.totalInvoices || 0}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>GST Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-400">
+                  <p>Select date range to view GST report</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Product Form Modal */}
+      {showProductForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Add Product</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setShowProductForm(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleProductSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">SKU *</label>
+                  <Input
+                    value={productForm.sku}
+                    onChange={(e) => setProductForm({...productForm, sku: e.target.value})}
+                    placeholder="PROD001"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Product Name *</label>
+                  <Input
+                    value={productForm.name}
+                    onChange={(e) => setProductForm({...productForm, name: e.target.value})}
+                    placeholder="Product Name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">HSN Code</label>
+                  <Input
+                    value={productForm.hsn}
+                    onChange={(e) => setProductForm({...productForm, hsn: e.target.value})}
+                    placeholder="1234"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Selling Price *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={productForm.unitPrice}
+                      onChange={(e) => setProductForm({...productForm, unitPrice: e.target.value})}
+                      placeholder="100"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Purchase Price</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={productForm.purchasePrice}
+                      onChange={(e) => setProductForm({...productForm, purchasePrice: e.target.value})}
+                      placeholder="80"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Stock Quantity *</label>
+                    <Input
+                      type="number"
+                      value={productForm.stock}
+                      onChange={(e) => setProductForm({...productForm, stock: e.target.value})}
+                      placeholder="50"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Tax Rate (%) *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={productForm.taxRate}
+                      onChange={(e) => setProductForm({...productForm, taxRate: e.target.value})}
+                      placeholder="18"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Product
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Customer Form Modal */}
+      {showCustomerForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Add Customer</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setShowCustomerForm(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCustomerSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Name *</label>
+                  <Input
+                    value={customerForm.name}
+                    onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
+                    placeholder="Customer Name"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Phone</label>
+                    <Input
+                      value={customerForm.phone}
+                      onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
+                      placeholder="9876543210"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Email</label>
+                    <Input
+                      type="email"
+                      value={customerForm.email}
+                      onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">GSTIN</label>
+                  <Input
+                    value={customerForm.gstin}
+                    onChange={(e) => setCustomerForm({...customerForm, gstin: e.target.value})}
+                    placeholder="29ABCDE1234F1Z5"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Address</label>
+                  <Input
+                    value={customerForm.address}
+                    onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
+                    placeholder="Street, Area"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">City</label>
+                    <Input
+                      value={customerForm.city}
+                      onChange={(e) => setCustomerForm({...customerForm, city: e.target.value})}
+                      placeholder="City"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">State</label>
+                    <Input
+                      value={customerForm.state}
+                      onChange={(e) => setCustomerForm({...customerForm, state: e.target.value})}
+                      placeholder="State"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Pincode</label>
+                    <Input
+                      value={customerForm.pincode}
+                      onChange={(e) => setCustomerForm({...customerForm, pincode: e.target.value})}
+                      placeholder="560001"
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Customer
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
-  );
+  )
 }
-
-export default App;
