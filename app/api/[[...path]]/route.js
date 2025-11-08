@@ -39,6 +39,21 @@ export async function GET(request) {
       return NextResponse.json({ status: 'ok', database: 'supabase' })
     }
 
+    // Get SQL setup script
+    if (path === 'setup-sql') {
+      const fs = require('fs')
+      try {
+        const sql = fs.readFileSync('/app/create-tables.sql', 'utf-8')
+        return new NextResponse(sql, {
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+        })
+      } catch (error) {
+        return NextResponse.json({ error: 'SQL file not found' }, { status: 404 })
+      }
+    }
+
     // Get all companies
     if (path === 'companies') {
       const { data, error } = await supabase
