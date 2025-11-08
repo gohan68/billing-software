@@ -398,11 +398,40 @@ export default function App() {
   if (currentPage === 'setup') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-2xl mx-auto mt-20">
+        <div className="max-w-2xl mx-auto mt-10">
+          {/* Database Setup Instructions */}
+          <Card className="mb-6 border-orange-200 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="text-xl text-orange-800 flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                One-Time Database Setup Required
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p className="text-orange-700">
+                Before you can start using BillMaster, you need to create the database tables in Supabase:
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-orange-800">
+                <li>Open your <strong>Supabase Dashboard</strong>: <a href="https://supabase.com/dashboard/project/zlfbgxapqyhdgupjbvwr" target="_blank" className="text-blue-600 underline">Click here</a></li>
+                <li>Navigate to <strong>SQL Editor</strong> (left sidebar)</li>
+                <li>Click <strong>"New Query"</strong></li>
+                <li>Copy the SQL from <code className="bg-orange-100 px-2 py-1 rounded">/app/create-tables.sql</code></li>
+                <li>Paste and click <strong>"Run"</strong></li>
+                <li>Refresh this page</li>
+              </ol>
+              <div className="bg-orange-100 p-3 rounded border border-orange-200 mt-4">
+                <p className="font-medium text-orange-900">Quick SQL Access:</p>
+                <p className="text-xs text-orange-700 mt-1">The SQL file is located at: <code>/app/create-tables.sql</code></p>
+                <p className="text-xs text-orange-700 mt-1">Or check the detailed guide: <code>/app/SETUP_INSTRUCTIONS.md</code></p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Company Setup Form */}
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Welcome to BillMaster</CardTitle>
-              <CardDescription>Let's set up your business profile to get started</CardDescription>
+              <CardDescription>After running the SQL script, set up your business profile here</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCompanySubmit} className="space-y-4">
