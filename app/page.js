@@ -69,9 +69,18 @@ export default function App() {
     try {
       // Load company
       const compRes = await fetch('/api/companies')
+      
+      // Check if response is ok
+      if (!compRes.ok) {
+        console.error('Failed to fetch companies:', compRes.status)
+        setCurrentPage('setup')
+        setLoading(false)
+        return
+      }
+      
       const companies = await compRes.json()
       
-      if (companies.length > 0) {
+      if (companies && companies.length > 0) {
         const comp = companies[0]
         setCompany(comp)
         setCurrentPage('pos')
@@ -93,6 +102,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error loading data:', error)
+      setCurrentPage('setup')
     } finally {
       setLoading(false)
     }
