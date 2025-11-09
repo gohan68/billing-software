@@ -755,6 +755,10 @@ Please clear your payment. Thank you!`
         invoiceNo = `INV-${String(lastNum + 1).padStart(3, '0')}`
       }
       
+      // Determine invoice status based on payment mode
+      const finalPaymentMode = paymentMode || 'Cash'
+      const invoiceStatus = finalPaymentMode === 'Credit' ? 'Pending' : 'Paid'
+      
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -768,14 +772,36 @@ Please clear your payment. Thank you!`
           sgstAmount: gst.sgstAmount,
           igstAmount: gst.igstAmount,
           totalAmount: subtotal + gst.taxAmount,
-          paymentMode: paymentMode || 'Cash',
-          status: 'Paid',
+          paymentMode: finalPaymentMode,
+          status: invoiceStatus,
           notes
         }])
         .select()
         .single()
       
       if (invoiceError) throw invoiceError
+      
+      // If payment mode is Credit, create balance record
+      if (finalPaymentMode === 'Credit' && customerId) {
+        const totalAmount = subtotal + gst.taxAmount
+        
+        const { error: balanceError } = await supabase
+          .from('balances')
+          .insert([{
+            companyId,
+            customerId,
+            invoiceId: invoice.id,
+            totalAmount,
+            paidAmount: 0,
+            pendingAmount: totalAmount,
+            status: 'Pending'
+          }])
+        
+        if (balanceError) {
+          console.error('Error creating balance:', balanceError)
+          // Don't fail the invoice creation if balance creation fails
+        }
+      }
       
       // Create invoice items
       const itemsWithInvoiceId = invoiceItems.map(item => ({
