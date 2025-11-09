@@ -220,6 +220,134 @@ export async function GET(request) {
       return NextResponse.json(summary)
     }
 
+    // Get all balances (credit sales)
+    if (path === 'balances') {
+      const companyId = searchParams.get('companyId')
+      let query = supabase
+        .from('balances')
+        .select(`
+          *,
+          customers (name, phone, address, city, state, pincode),
+          invoices (invoiceNo, invoiceDate)
+        `)
+      
+      if (companyId) {
+        query = query.eq('companyId', companyId)
+      }
+      
+      query = query.order('createdAt', { ascending: false })
+      
+      const { data, error } = await query
+      if (error) throw error
+      return NextResponse.json(data || [])
+    }
+
+    // Get balance by ID with details
+    if (path.startsWith('balances/') && path.split('/').length === 2) {
+      const balanceId = path.split('/')[1]
+      
+      const { data: balance, error: balanceError } = await supabase
+        .from('balances')
+        .select(`
+          *,
+          customers (*),
+          invoices (*)
+        `)
+        .eq('id', balanceId)
+        .single()
+      
+      if (balanceError) throw balanceError
+      
+      // Get payment history
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payment_history')
+        .select('*')
+        .eq('balanceId', balanceId)
+        .order('paymentDate', { ascending: false })
+      
+      if (paymentsError) throw paymentsError
+      
+      // Get reminder history
+      const { data: reminders, error: remindersError } = await supabase
+        .from('whatsapp_reminders')
+        .select('*')
+        .eq('balanceId', balanceId)
+        .order('sentAt', { ascending: false })
+      
+      if (remindersError) throw remindersError
+      
+      return NextResponse.json({ ...balance, payments, reminders })
+    }
+
+    // Get customer balances
+    if (path.startsWith('balances/customer/')) {
+      const customerId = path.split('/')[2]
+      
+      const { data, error } = await supabase
+        .from('balances')
+        .select(`
+          *,
+          invoices (invoiceNo, invoiceDate)
+        `)
+        .eq('customerId', customerId)
+        .order('createdAt', { ascending: false })
+      
+      if (error) throw error
+      return NextResponse.json(data || [])
+    }
+
+    // Get WhatsApp settings
+    if (path === 'whatsapp-settings') {
+      const companyId = searchParams.get('companyId')
+      
+      if (!companyId) {
+        return NextResponse.json({ error: 'Company ID required' }, { status: 400 })
+      }
+      
+      const { data, error } = await supabase
+        .from('whatsapp_settings')
+        .select('*')
+        .eq('companyId', companyId)
+        .single()
+      
+      if (error && error.code === 'PGRST116') {
+        // No settings found, return defaults
+        return NextResponse.json({
+          provider: 'none',
+          autoRemindersEnabled: false,
+          reminderFrequencyDays: 3
+        })
+      }
+      
+      if (error) throw error
+      
+      // Don't send sensitive credentials to frontend
+      const { twilioAuthToken, metaAccessToken, ...safeSettings } = data
+      safeSettings.twilioConfigured = !!twilioAuthToken
+      safeSettings.metaConfigured = !!metaAccessToken
+      
+      return NextResponse.json(safeSettings)
+    }
+
+    // Get pending balances count for automation
+    if (path === 'balances/pending/count') {
+      const companyId = searchParams.get('companyId')
+      
+      if (!companyId) {
+        return NextResponse.json({ error: 'Company ID required' }, { status: 400 })
+      }
+      
+      const { count, error } = await supabase
+        .from('balances')
+        .select('*', { count: 'exact', head: true })
+        .eq('companyId', companyId)
+        .gt('pendingAmount', 0)
+      
+      if (error) throw error
+      
+      return NextResponse.json({ count: count || 0 })
+    }
+
     return NextResponse.json({ error: 'Route not found' }, { status: 404 })
 
   } catch (error) {
