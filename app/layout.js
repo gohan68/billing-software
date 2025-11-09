@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Next.js MongoDB Template',
-  description: 'A simple template with App Router, MongoDB, and shadcn/ui',
+  title: 'BillMaster - POS & Billing Software',
+  description: 'Complete billing software with credit management and WhatsApp payment reminders',
 }
 
 export default function RootLayout({ children }) {
