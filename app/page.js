@@ -1456,6 +1456,98 @@ export default function App() {
           </Card>
         </div>
       )}
+
+      {/* Payment Form Modal */}
+      {showPaymentForm && selectedBalance && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Record Payment</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => {
+                  setShowPaymentForm(false)
+                  setSelectedBalance(null)
+                }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 p-4 bg-gray-50 rounded">
+                <p className="text-sm text-gray-600">Customer: <strong>{selectedBalance.customers?.name}</strong></p>
+                <p className="text-sm text-gray-600">Pending Amount: <strong className="text-red-600">₹{parseFloat(selectedBalance.pendingAmount).toFixed(2)}</strong></p>
+              </div>
+              
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                const formData = new FormData(e.target)
+                const paymentAmount = formData.get('paymentAmount')
+                const paymentMode = formData.get('paymentMode')
+                const notes = formData.get('notes')
+                
+                try {
+                  const res = await fetch(`/api/balances/${selectedBalance.id}/payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      paymentAmount: parseFloat(paymentAmount),
+                      paymentMode,
+                      notes
+                    })
+                  })
+                  
+                  if (res.ok) {
+                    alert('Payment recorded successfully!')
+                    setShowPaymentForm(false)
+                    setSelectedBalance(null)
+                    loadData()
+                  } else {
+                    alert('Failed to record payment')
+                  }
+                } catch (error) {
+                  alert('Error: ' + error.message)
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Payment Amount *</label>
+                  <Input
+                    name="paymentAmount"
+                    type="number"
+                    step="0.01"
+                    max={selectedBalance.pendingAmount}
+                    placeholder="Enter amount"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum: ₹{parseFloat(selectedBalance.pendingAmount).toFixed(2)}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Payment Mode *</label>
+                  <select name="paymentMode" className="w-full mt-1 p-2 border rounded" required>
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Notes</label>
+                  <Input
+                    name="notes"
+                    placeholder="Optional notes"
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full">
+                  <Save className="w-4 h-4 mr-2" />
+                  Record Payment
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
