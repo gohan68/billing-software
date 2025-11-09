@@ -14,6 +14,8 @@ export default function App() {
   const [products, setProducts] = useState([])
   const [customers, setCustomers] = useState([])
   const [invoices, setInvoices] = useState([])
+  const [balances, setBalances] = useState([])
+  const [whatsappSettings, setWhatsappSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState(null)
 
