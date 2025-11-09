@@ -399,6 +399,306 @@ export async function POST(request) {
       return NextResponse.json(data)
     }
 
+    // Create balance (credit sale)
+    if (path === 'balances') {
+      const { companyId, customerId, invoiceId, totalAmount, paidAmount } = body
+      
+      const pendingAmount = totalAmount - (paidAmount || 0)
+      const status = pendingAmount === 0 ? 'Cleared' : 
+                     paidAmount > 0 ? 'Partially Paid' : 'Pending'
+      
+      const { data, error } = await supabase
+        .from('balances')
+        .insert([{
+          companyId,
+          customerId,
+          invoiceId,
+          totalAmount,
+          paidAmount: paidAmount || 0,
+          pendingAmount,
+          status
+        }])
+        .select()
+        .single()
+      
+      if (error) throw error
+      return NextResponse.json(data)
+    }
+
+    // Record payment for balance
+    if (path.startsWith('balances/') && path.endsWith('/payment')) {
+      const balanceId = path.split('/')[1]
+      const { paymentAmount, paymentMode, notes } = body
+      
+      // Get current balance
+      const { data: balance, error: balanceError } = await supabase
+        .from('balances')
+        .select('*')
+        .eq('id', balanceId)
+        .single()
+      
+      if (balanceError) throw balanceError
+      
+      // Calculate new amounts
+      const newPaidAmount = parseFloat(balance.paidAmount) + parseFloat(paymentAmount)
+      const newPendingAmount = parseFloat(balance.totalAmount) - newPaidAmount
+      const newStatus = newPendingAmount <= 0 ? 'Cleared' : 
+                       newPaidAmount > 0 ? 'Partially Paid' : 'Pending'
+      
+      // Record payment
+      const { data: payment, error: paymentError } = await supabase
+        .from('payment_history')
+        .insert([{
+          balanceId,
+          paymentAmount,
+          paymentMode: paymentMode || 'Cash',
+          notes
+        }])
+        .select()
+        .single()
+      
+      if (paymentError) throw paymentError
+      
+      // Update balance
+      const { data: updatedBalance, error: updateError } = await supabase
+        .from('balances')
+        .update({
+          paidAmount: newPaidAmount,
+          pendingAmount: newPendingAmount,
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', balanceId)
+        .select()
+        .single()
+      
+      if (updateError) throw updateError
+      
+      return NextResponse.json({ balance: updatedBalance, payment })
+    }
+
+    // Send WhatsApp reminder
+    if (path.startsWith('balances/') && path.endsWith('/send-reminder')) {
+      const balanceId = path.split('/')[1]
+      
+      // Get balance with customer and invoice details
+      const { data: balance, error: balanceError } = await supabase
+        .from('balances')
+        .select(`
+          *,
+          customers (*),
+          invoices (*),
+          companies (*)
+        `)
+        .eq('id', balanceId)
+        .single()
+      
+      if (balanceError) throw balanceError
+      
+      // Get WhatsApp settings
+      const { data: settings, error: settingsError } = await supabase
+        .from('whatsapp_settings')
+        .select('*')
+        .eq('companyId', balance.companyId)
+        .single()
+      
+      if (settingsError || !settings || settings.provider === 'none') {
+        return NextResponse.json({ 
+          error: 'WhatsApp not configured. Please configure in Settings.' 
+        }, { status: 400 })
+      }
+      
+      // Format reminder message
+      const message = `Hi ${balance.customers.name},
+
+This is a payment reminder from ${balance.companies.name}.
+
+Invoice: ${balance.invoices.invoiceNo}
+Date: ${new Date(balance.invoices.invoiceDate).toLocaleDateString()}
+Total Amount: ₹${balance.totalAmount.toFixed(2)}
+Paid: ₹${balance.paidAmount.toFixed(2)}
+Pending: ₹${balance.pendingAmount.toFixed(2)}
+
+Please clear the pending balance at your earliest convenience.
+
+Thank you!`
+      
+      // Send WhatsApp message
+      try {
+        const whatsappClient = new WhatsAppClient(settings.provider, settings)
+        const result = await whatsappClient.sendMessage(balance.customers.phone, message)
+        
+        // Log reminder
+        const { data: reminder, error: reminderError } = await supabase
+          .from('whatsapp_reminders')
+          .insert([{
+            balanceId,
+            customerId: balance.customerId,
+            phoneNumber: balance.customers.phone,
+            message,
+            status: 'Sent'
+          }])
+          .select()
+          .single()
+        
+        if (reminderError) throw reminderError
+        
+        // Update last reminder sent
+        await supabase
+          .from('balances')
+          .update({ lastReminderSent: new Date().toISOString() })
+          .eq('id', balanceId)
+        
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Reminder sent successfully',
+          reminder 
+        })
+      } catch (error) {
+        // Log failed reminder
+        await supabase
+          .from('whatsapp_reminders')
+          .insert([{
+            balanceId,
+            customerId: balance.customerId,
+            phoneNumber: balance.customers.phone,
+            message,
+            status: 'Failed',
+            errorMessage: error.message
+          }])
+        
+        throw error
+      }
+    }
+
+    // Save WhatsApp settings
+    if (path === 'whatsapp-settings') {
+      const { companyId, ...settingsData } = body
+      
+      // Check if settings exist
+      const { data: existing } = await supabase
+        .from('whatsapp_settings')
+        .select('id')
+        .eq('companyId', companyId)
+        .single()
+      
+      let result
+      if (existing) {
+        // Update existing
+        const { data, error } = await supabase
+          .from('whatsapp_settings')
+          .update({
+            ...settingsData,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('companyId', companyId)
+          .select()
+          .single()
+        
+        if (error) throw error
+        result = data
+      } else {
+        // Insert new
+        const { data, error } = await supabase
+          .from('whatsapp_settings')
+          .insert([{
+            companyId,
+            ...settingsData
+          }])
+          .select()
+          .single()
+        
+        if (error) throw error
+        result = data
+      }
+      
+      return NextResponse.json(result)
+    }
+
+    // Auto-send reminders (called by cron or manual trigger)
+    if (path === 'balances/send-auto-reminders') {
+      const { companyId } = body
+      
+      if (!companyId) {
+        return NextResponse.json({ error: 'Company ID required' }, { status: 400 })
+      }
+      
+      // Get WhatsApp settings
+      const { data: settings, error: settingsError } = await supabase
+        .from('whatsapp_settings')
+        .select('*')
+        .eq('companyId', companyId)
+        .single()
+      
+      if (settingsError || !settings || !settings.autoRemindersEnabled) {
+        return NextResponse.json({ 
+          message: 'Auto reminders not enabled' 
+        })
+      }
+      
+      // Get pending balances that need reminders
+      const reminderCutoff = new Date()
+      reminderCutoff.setDate(reminderCutoff.getDate() - settings.reminderFrequencyDays)
+      
+      const { data: balances, error: balancesError } = await supabase
+        .from('balances')
+        .select(`
+          *,
+          customers (*),
+          invoices (*),
+          companies (*)
+        `)
+        .eq('companyId', companyId)
+        .gt('pendingAmount', 0)
+        .or(`lastReminderSent.is.null,lastReminderSent.lt.${reminderCutoff.toISOString()}`)
+      
+      if (balancesError) throw balancesError
+      
+      const results = []
+      const whatsappClient = new WhatsAppClient(settings.provider, settings)
+      
+      for (const balance of balances) {
+        try {
+          const message = `Hi ${balance.customers.name},
+
+Payment Reminder from ${balance.companies.name}
+
+Invoice: ${balance.invoices.invoiceNo}
+Pending Amount: ₹${balance.pendingAmount.toFixed(2)}
+
+Please clear your payment. Thank you!`
+          
+          await whatsappClient.sendMessage(balance.customers.phone, message)
+          
+          // Log reminder
+          await supabase
+            .from('whatsapp_reminders')
+            .insert([{
+              balanceId: balance.id,
+              customerId: balance.customerId,
+              phoneNumber: balance.customers.phone,
+              message,
+              status: 'Sent'
+            }])
+          
+          // Update last reminder sent
+          await supabase
+            .from('balances')
+            .update({ lastReminderSent: new Date().toISOString() })
+            .eq('id', balance.id)
+          
+          results.push({ balanceId: balance.id, status: 'sent' })
+        } catch (error) {
+          results.push({ balanceId: balance.id, status: 'failed', error: error.message })
+        }
+      }
+      
+      return NextResponse.json({ 
+        sent: results.length,
+        results 
+      })
+    }
+
     // Create invoice with items
     if (path === 'invoices') {
       const { companyId, customerId, items, paymentMode, notes } = body
