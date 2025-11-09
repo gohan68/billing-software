@@ -595,6 +595,22 @@ export default function App() {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Reports
               </Button>
+              <Button
+                variant={currentPage === 'balances' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('balances')}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Balance Due
+              </Button>
+              <Button
+                variant={currentPage === 'settings' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentPage('settings')}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
             </div>
           </div>
           <div className="text-sm text-gray-600">
