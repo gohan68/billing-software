@@ -1010,6 +1010,263 @@ export default function App() {
         </div>
       )}
 
+      {/* Balance Due Page */}
+      {currentPage === 'balances' && (
+        <div className="max-w-7xl mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Balance Due / Credit Sales</CardTitle>
+              <CardDescription>Track customers with pending payments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Customer</th>
+                      <th className="text-left p-2">Phone</th>
+                      <th className="text-left p-2">Invoice</th>
+                      <th className="text-left p-2">Total</th>
+                      <th className="text-left p-2">Paid</th>
+                      <th className="text-left p-2">Pending</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {balances.filter(b => parseFloat(b.pendingAmount) > 0).map(balance => (
+                      <tr key={balance.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2 font-medium">{balance.customers?.name || 'N/A'}</td>
+                        <td className="p-2">{balance.customers?.phone || 'N/A'}</td>
+                        <td className="p-2">{balance.invoices?.invoiceNo || 'N/A'}</td>
+                        <td className="p-2">₹{parseFloat(balance.totalAmount).toFixed(2)}</td>
+                        <td className="p-2 text-green-600">₹{parseFloat(balance.paidAmount).toFixed(2)}</td>
+                        <td className="p-2 text-red-600 font-bold">₹{parseFloat(balance.pendingAmount).toFixed(2)}</td>
+                        <td className="p-2">
+                          <Badge 
+                            variant={balance.status === 'Pending' ? 'destructive' : 
+                                   balance.status === 'Partially Paid' ? 'default' : 'secondary'}
+                          >
+                            {balance.status}
+                          </Badge>
+                        </td>
+                        <td className="p-2">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/balances/${balance.id}/send-reminder`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' }
+                                  })
+                                  if (res.ok) {
+                                    alert('Reminder sent successfully!')
+                                    loadData()
+                                  } else {
+                                    const error = await res.json()
+                                    alert(error.error || 'Failed to send reminder')
+                                  }
+                                } catch (error) {
+                                  alert('Error sending reminder: ' + error.message)
+                                }
+                              }}
+                            >
+                              Send Reminder
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedBalance(balance)
+                                setShowPaymentForm(true)
+                              }}
+                            >
+                              Record Payment
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {balances.filter(b => parseFloat(b.pendingAmount) > 0).length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <p>No pending balances</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Settings Page */}
+      {currentPage === 'settings' && (
+        <div className="max-w-4xl mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>WhatsApp Payment Reminder Settings</CardTitle>
+              <CardDescription>Configure WhatsApp integration for automated payment reminders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                const formData = new FormData(e.target)
+                const settings = {
+                  companyId: company.id,
+                  provider: formData.get('provider'),
+                  autoRemindersEnabled: formData.get('autoRemindersEnabled') === 'on',
+                  reminderFrequencyDays: parseInt(formData.get('reminderFrequencyDays')),
+                  twilioAccountSid: formData.get('twilioAccountSid') || null,
+                  twilioAuthToken: formData.get('twilioAuthToken') || null,
+                  twilioPhoneNumber: formData.get('twilioPhoneNumber') || null,
+                  metaAccessToken: formData.get('metaAccessToken') || null,
+                  metaPhoneNumberId: formData.get('metaPhoneNumberId') || null,
+                  metaBusinessAccountId: formData.get('metaBusinessAccountId') || null
+                }
+                
+                try {
+                  const res = await fetch('/api/whatsapp-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                  })
+                  
+                  if (res.ok) {
+                    alert('Settings saved successfully!')
+                    loadData()
+                  } else {
+                    alert('Failed to save settings')
+                  }
+                } catch (error) {
+                  alert('Error: ' + error.message)
+                }
+              }} className="space-y-6">
+                
+                <div>
+                  <label className="text-sm font-medium">WhatsApp Provider *</label>
+                  <select 
+                    name="provider" 
+                    className="w-full mt-1 p-2 border rounded"
+                    defaultValue={whatsappSettings?.provider || 'none'}
+                  >
+                    <option value="none">None (Disable WhatsApp)</option>
+                    <option value="twilio">Twilio WhatsApp API</option>
+                    <option value="meta">Meta WhatsApp Cloud API</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Choose your WhatsApp integration provider</p>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-medium mb-3">Twilio Settings</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium">Twilio Account SID</label>
+                      <Input
+                        name="twilioAccountSid"
+                        defaultValue={whatsappSettings?.twilioAccountSid || ''}
+                        placeholder="AC..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Twilio Auth Token</label>
+                      <Input
+                        name="twilioAuthToken"
+                        type="password"
+                        defaultValue={whatsappSettings?.twilioAuthToken || ''}
+                        placeholder="Your auth token"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Twilio Phone Number</label>
+                      <Input
+                        name="twilioPhoneNumber"
+                        defaultValue={whatsappSettings?.twilioPhoneNumber || ''}
+                        placeholder="+1234567890"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-medium mb-3">Meta WhatsApp Cloud API Settings</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium">Access Token</label>
+                      <Input
+                        name="metaAccessToken"
+                        type="password"
+                        defaultValue={whatsappSettings?.metaAccessToken || ''}
+                        placeholder="EAA..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Phone Number ID</label>
+                      <Input
+                        name="metaPhoneNumberId"
+                        defaultValue={whatsappSettings?.metaPhoneNumberId || ''}
+                        placeholder="1234567890"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Business Account ID</label>
+                      <Input
+                        name="metaBusinessAccountId"
+                        defaultValue={whatsappSettings?.metaBusinessAccountId || ''}
+                        placeholder="1234567890"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-medium mb-3">Automation Settings</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        name="autoRemindersEnabled" 
+                        id="autoRemindersEnabled"
+                        defaultChecked={whatsappSettings?.autoRemindersEnabled || false}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="autoRemindersEnabled" className="text-sm font-medium">
+                        Enable Automatic Payment Reminders
+                      </label>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Reminder Frequency (days)</label>
+                      <Input
+                        name="reminderFrequencyDays"
+                        type="number"
+                        min="1"
+                        defaultValue={whatsappSettings?.reminderFrequencyDays || 3}
+                        placeholder="3"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Send reminders every N days for pending balances</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" size="lg">
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Settings
+                </Button>
+              </form>
+
+              <div className="mt-6 p-4 bg-blue-50 rounded border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2">📘 Setup Instructions</h4>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <p><strong>Twilio:</strong> Sign up at twilio.com, get your Account SID, Auth Token, and WhatsApp-enabled phone number.</p>
+                  <p><strong>Meta WhatsApp:</strong> Visit developers.facebook.com, create a Meta App, enable WhatsApp product, and get your access token and phone number ID.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Product Form Modal */}
       {showProductForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
