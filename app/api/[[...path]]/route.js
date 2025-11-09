@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../lib/supabase.js'
+import { WhatsAppClient } from '../../../lib/whatsapp.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
