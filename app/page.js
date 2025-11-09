@@ -90,17 +90,21 @@ export default function App() {
         setCurrentPage('pos')
         
         // Load all data
-        const [prodsRes, custsRes, invsRes, statsRes] = await Promise.all([
+        const [prodsRes, custsRes, invsRes, statsRes, balancesRes, whatsappRes] = await Promise.all([
           fetch(`/api/products?companyId=${comp.id}`),
           fetch(`/api/customers?companyId=${comp.id}`),
           fetch(`/api/invoices?companyId=${comp.id}`),
-          fetch(`/api/dashboard/stats?companyId=${comp.id}`)
+          fetch(`/api/dashboard/stats?companyId=${comp.id}`),
+          fetch(`/api/balances?companyId=${comp.id}`),
+          fetch(`/api/whatsapp-settings?companyId=${comp.id}`)
         ])
         
         setProducts(await prodsRes.json())
         setCustomers(await custsRes.json())
         setInvoices(await invsRes.json())
         setStats(await statsRes.json())
+        setBalances(await balancesRes.json())
+        setWhatsappSettings(await whatsappRes.json())
       } else {
         setCurrentPage('setup')
       }
