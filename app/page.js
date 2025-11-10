@@ -27,7 +27,7 @@ export default function App() {
 
   // Form states
   const [showProductForm, setShowProductForm] = useState(false)
-  const [showCustomerForm, setShowCustomerForm] = useState(false)
+  const [showInlineCustomerForm, setShowInlineCustomerForm] = useState(false)
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [selectedBalance, setSelectedBalance] = useState(null)
