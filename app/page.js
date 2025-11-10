@@ -1196,36 +1196,23 @@ export default function App() {
       {/* Reports */}
       {currentPage === 'reports' && (
         <div className="max-w-7xl mx-auto p-4">
-          <div className="grid grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <span>Today's Sales</span>
-                    <span className="text-xl font-bold text-green-600">₹{stats?.todaySales || '0.00'}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <span>Total Invoices</span>
-                    <span className="text-xl font-bold">{stats?.totalInvoices || 0}</span>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <span>Today's Sales</span>
+                  <span className="text-xl font-bold text-green-600">₹{stats?.todaySales || '0.00'}</span>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>GST Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-400">
-                  <p>Select date range to view GST report</p>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <span>Total Invoices</span>
+                  <span className="text-xl font-bold">{stats?.totalInvoices || 0}</span>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
