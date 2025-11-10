@@ -254,16 +254,12 @@ export default function App() {
   }
 
   const calculateCartTotal = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
-    const taxAmount = cart.reduce((sum, item) => {
-      const itemSubtotal = item.unitPrice * item.quantity
-      return sum + (itemSubtotal * item.taxRate / 100)
-    }, 0)
+    const total = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
     
     return {
-      subtotal,
-      taxAmount,
-      total: subtotal + taxAmount
+      subtotal: total,
+      taxAmount: 0,
+      total: total
     }
   }
 
