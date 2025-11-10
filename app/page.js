@@ -27,7 +27,8 @@ export default function App() {
 
   // Form states
   const [showProductForm, setShowProductForm] = useState(false)
-  const [showInlineCustomerForm, setShowInlineCustomerForm] = useState(false)
+  const [showCustomerForm, setShowCustomerForm] = useState(false) // Modal form (legacy)
+  const [showInlineCustomerForm, setShowInlineCustomerForm] = useState(false) // Inline form in POS
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [selectedBalance, setSelectedBalance] = useState(null)
