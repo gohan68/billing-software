@@ -870,11 +870,11 @@ export default function App() {
                         <div className="border-t pt-3 space-y-3">
                           <div className="flex items-center justify-between">
                             <label className="text-sm font-medium text-orange-600">Customer Details Required</label>
-                            {!showCustomerForm && (
+                            {!showInlineCustomerForm && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setShowCustomerForm(true)}
+                                onClick={() => setShowInlineCustomerForm(true)}
                               >
                                 <Plus className="w-4 h-4 mr-1" />
                                 Add New
@@ -882,7 +882,7 @@ export default function App() {
                             )}
                           </div>
 
-                          {!showCustomerForm ? (
+                          {!showInlineCustomerForm ? (
                             <div>
                               <label className="text-sm">Select Customer</label>
                               <select
@@ -909,7 +909,7 @@ export default function App() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => {
-                                    setShowCustomerForm(false)
+                                    setShowInlineCustomerForm(false)
                                     setCustomerForm({
                                       name: '',
                                       phone: '',
@@ -971,7 +971,7 @@ export default function App() {
                             </div>
                           )}
 
-                          {selectedCustomer && !showCustomerForm && (
+                          {selectedCustomer && !showInlineCustomerForm && (
                             <div className="text-xs text-gray-600 bg-green-50 p-2 rounded">
                               <strong>Selected:</strong> {selectedCustomer.name}<br/>
                               <strong>Phone:</strong> {selectedCustomer.phone}
