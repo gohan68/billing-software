@@ -913,13 +913,11 @@ Please clear your payment. Thank you!`
         .eq('id', customerId)
         .single() : { data: null }
       
-      // Calculate totals
+      // Calculate totals (no GST)
       let subtotal = 0
       const invoiceItems = items.map(item => {
-        const lineSubtotal = item.quantity * item.unitPrice
-        const lineTax = (lineSubtotal * item.taxRate) / 100
-        const lineTotal = lineSubtotal + lineTax
-        subtotal += lineSubtotal
+        const lineTotal = item.quantity * item.unitPrice
+        subtotal += lineTotal
         
         return {
           productId: item.productId,
@@ -927,15 +925,19 @@ Please clear your payment. Thank you!`
           hsn: item.hsn,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          taxRate: item.taxRate,
-          taxAmount: lineTax,
+          taxRate: 0,
+          taxAmount: 0,
           lineTotal: lineTotal
         }
       })
       
-      // Calculate GST
-      const avgTaxRate = items.reduce((sum, item) => sum + parseFloat(item.taxRate), 0) / items.length
-      const gst = calculateGST(subtotal, avgTaxRate, company?.state, customer?.state)
+      // No GST calculation
+      const gst = {
+        taxAmount: 0,
+        cgstAmount: 0,
+        sgstAmount: 0,
+        igstAmount: 0
+      }
       
       // Generate invoice number
       const { data: lastInvoice } = await supabase
