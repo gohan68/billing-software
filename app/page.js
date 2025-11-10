@@ -231,7 +231,7 @@ export default function App() {
         productName: product.name,
         hsn: product.hsn,
         unitPrice: parseFloat(product.unitPrice),
-        taxRate: parseFloat(product.taxRate),
+        taxRate: 0,
         quantity: 1
       }])
     }
