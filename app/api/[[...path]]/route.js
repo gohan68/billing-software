@@ -699,6 +699,214 @@ Please clear your payment. Thank you!`
       })
     }
 
+    // Import balances from Excel
+    if (path === 'balances/import') {
+      const { companyId, data: importData } = body
+      
+      if (!companyId) {
+        return NextResponse.json({ error: 'Company ID required' }, { status: 400 })
+      }
+      
+      if (!importData || !Array.isArray(importData) || importData.length === 0) {
+        return NextResponse.json({ error: 'No data to import' }, { status: 400 })
+      }
+      
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [],
+        created: []
+      }
+      
+      // Get company details for invoice generation
+      const { data: company } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single()
+      
+      if (!company) {
+        return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+      }
+      
+      // Get last invoice number for sequence
+      const { data: lastInvoice } = await supabase
+        .from('invoices')
+        .select('invoiceNo')
+        .eq('companyId', companyId)
+        .order('createdAt', { ascending: false })
+        .limit(1)
+        .single()
+      
+      let invoiceCounter = 1
+      if (lastInvoice && lastInvoice.invoiceNo) {
+        const match = lastInvoice.invoiceNo.match(/(\d+)$/)
+        if (match) {
+          invoiceCounter = parseInt(match[1]) + 1
+        }
+      }
+      
+      // Process each row
+      for (const row of importData) {
+        try {
+          const { customerName, phone, amount } = row
+          
+          // Validate required fields
+          if (!customerName || !amount || amount <= 0) {
+            results.failed++
+            results.errors.push({
+              row: customerName || 'Unknown',
+              error: 'Missing required fields (name or amount)'
+            })
+            continue
+          }
+          
+          // Find or create customer
+          let customer = null
+          if (phone) {
+            const { data: existingCustomer } = await supabase
+              .from('customers')
+              .select('*')
+              .eq('companyId', companyId)
+              .eq('phone', phone)
+              .single()
+            
+            customer = existingCustomer
+          }
+          
+          // If no customer found by phone, try by name
+          if (!customer) {
+            const { data: customerByName } = await supabase
+              .from('customers')
+              .select('*')
+              .eq('companyId', companyId)
+              .ilike('name', customerName)
+              .single()
+            
+            customer = customerByName
+          }
+          
+          // Create customer if not found
+          if (!customer) {
+            const { data: newCustomer, error: customerError } = await supabase
+              .from('customers')
+              .insert([{
+                companyId,
+                name: customerName,
+                phone: phone || null,
+                outstandingBalance: 0
+              }])
+              .select()
+              .single()
+            
+            if (customerError) {
+              results.failed++
+              results.errors.push({
+                row: customerName,
+                error: `Failed to create customer: ${customerError.message}`
+              })
+              continue
+            }
+            
+            customer = newCustomer
+          }
+          
+          // Generate invoice number
+          const invoiceNo = `INV-${String(invoiceCounter).padStart(6, '0')}`
+          invoiceCounter++
+          
+          // Create invoice for the balance
+          const invoiceAmount = parseFloat(amount)
+          const taxRate = 18 // Default 18% GST
+          const subtotal = invoiceAmount / (1 + taxRate / 100)
+          const taxAmount = invoiceAmount - subtotal
+          
+          const { data: invoice, error: invoiceError } = await supabase
+            .from('invoices')
+            .insert([{
+              companyId,
+              customerId: customer.id,
+              invoiceNo,
+              invoiceDate: new Date().toISOString(),
+              subtotal,
+              taxAmount,
+              cgstAmount: taxAmount / 2,
+              sgstAmount: taxAmount / 2,
+              igstAmount: 0,
+              totalAmount: invoiceAmount,
+              paymentMode: 'Credit',
+              status: 'Pending',
+              notes: 'Imported from Excel'
+            }])
+            .select()
+            .single()
+          
+          if (invoiceError) {
+            results.failed++
+            results.errors.push({
+              row: customerName,
+              error: `Failed to create invoice: ${invoiceError.message}`
+            })
+            continue
+          }
+          
+          // Create invoice item (generic item for imported balances)
+          await supabase
+            .from('invoice_items')
+            .insert([{
+              invoiceId: invoice.id,
+              productName: 'Previous Balance',
+              hsn: '',
+              quantity: 1,
+              unitPrice: subtotal,
+              taxRate,
+              taxAmount,
+              lineTotal: invoiceAmount
+            }])
+          
+          // Create balance record
+          const { data: balance, error: balanceError } = await supabase
+            .from('balances')
+            .insert([{
+              companyId,
+              customerId: customer.id,
+              invoiceId: invoice.id,
+              totalAmount: invoiceAmount,
+              paidAmount: 0,
+              pendingAmount: invoiceAmount,
+              status: 'Pending'
+            }])
+            .select()
+            .single()
+          
+          if (balanceError) {
+            results.failed++
+            results.errors.push({
+              row: customerName,
+              error: `Failed to create balance: ${balanceError.message}`
+            })
+            continue
+          }
+          
+          results.success++
+          results.created.push({
+            customerName,
+            invoiceNo,
+            amount: invoiceAmount
+          })
+          
+        } catch (error) {
+          results.failed++
+          results.errors.push({
+            row: row.customerName || 'Unknown',
+            error: error.message
+          })
+        }
+      }
+      
+      return NextResponse.json(results)
+    }
+
     // Create invoice with items
     if (path === 'invoices') {
       const { companyId, customerId, items, paymentMode, notes } = body
