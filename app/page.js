@@ -395,9 +395,8 @@ export default function App() {
       doc.text('Product', 30, y)
       doc.text('HSN', 90, y)
       doc.text('Qty', 115, y)
-      doc.text('Rate', 135, y)
-      doc.text('Tax', 155, y)
-      doc.text('Amount', 175, y)
+      doc.text('Rate', 140, y)
+      doc.text('Amount', 170, y)
       
       y += 5
       doc.line(15, y, 195, y)
@@ -408,9 +407,8 @@ export default function App() {
         doc.text(item.productName, 30, y)
         doc.text(item.hsn || '-', 90, y)
         doc.text(item.quantity.toString(), 115, y)
-        doc.text(`₹${item.unitPrice.toFixed(2)}`, 135, y)
-        doc.text(`${item.taxRate}%`, 155, y)
-        doc.text(`₹${item.lineTotal.toFixed(2)}`, 175, y)
+        doc.text(`₹${item.unitPrice.toFixed(2)}`, 140, y)
+        doc.text(`₹${item.lineTotal.toFixed(2)}`, 170, y)
         y += 7
       })
       
@@ -419,24 +417,8 @@ export default function App() {
       
       // Totals
       y += 10
-      doc.text('Subtotal:', 140, y)
-      doc.text(`₹${invoice.subtotal.toFixed(2)}`, 175, y)
-      
-      y += 7
-      if (invoice.cgstAmount > 0) {
-        doc.text('CGST:', 140, y)
-        doc.text(`₹${invoice.cgstAmount.toFixed(2)}`, 175, y)
-        y += 7
-        doc.text('SGST:', 140, y)
-        doc.text(`₹${invoice.sgstAmount.toFixed(2)}`, 175, y)
-      } else {
-        doc.text('IGST:', 140, y)
-        doc.text(`₹${invoice.igstAmount.toFixed(2)}`, 175, y)
-      }
-      
-      y += 7
       doc.setFontSize(12)
-      doc.text('Total:', 140, y)
+      doc.text('Total Amount:', 140, y)
       doc.text(`₹${invoice.totalAmount.toFixed(2)}`, 175, y)
       
       // Footer
