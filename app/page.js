@@ -961,15 +961,7 @@ export default function App() {
                   {/* Totals */}
                   {cart.length > 0 && (
                     <div className="border-t pt-3 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>₹{totals.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Tax:</span>
-                        <span>₹{totals.taxAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-lg font-bold border-t pt-2">
+                      <div className="flex justify-between text-lg font-bold">
                         <span>Total:</span>
                         <span className="text-green-600">₹{totals.total.toFixed(2)}</span>
                       </div>
