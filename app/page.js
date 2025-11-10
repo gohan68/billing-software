@@ -796,18 +796,135 @@ export default function App() {
 
                   {/* Payment Mode */}
                   {cart.length > 0 && (
-                    <div>
-                      <label className="text-sm font-medium">Payment Mode</label>
-                      <select
-                        className="w-full mt-1 p-2 border rounded"
-                        value={paymentMode}
-                        onChange={(e) => setPaymentMode(e.target.value)}
-                      >
-                        <option value="Cash">Cash</option>
-                        <option value="UPI">UPI</option>
-                        <option value="Card">Card</option>
-                        <option value="Credit">Credit</option>
-                      </select>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium">Payment Mode</label>
+                        <select
+                          className="w-full mt-1 p-2 border rounded"
+                          value={paymentMode}
+                          onChange={(e) => setPaymentMode(e.target.value)}
+                        >
+                          <option value="Cash">Cash</option>
+                          <option value="UPI">UPI</option>
+                          <option value="Card">Card</option>
+                          <option value="Credit">Credit</option>
+                        </select>
+                      </div>
+
+                      {/* Customer Selection for Credit Sales */}
+                      {paymentMode === 'Credit' && (
+                        <div className="border-t pt-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-orange-600">Customer Details Required</label>
+                            {!showCustomerForm && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowCustomerForm(true)}
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Add New
+                              </Button>
+                            )}
+                          </div>
+
+                          {!showCustomerForm ? (
+                            <div>
+                              <label className="text-sm">Select Customer</label>
+                              <select
+                                className="w-full mt-1 p-2 border rounded"
+                                value={selectedCustomer?.id || ''}
+                                onChange={(e) => {
+                                  const customer = customers.find(c => c.id === e.target.value)
+                                  setSelectedCustomer(customer)
+                                }}
+                              >
+                                <option value="">-- Select Customer --</option>
+                                {customers.map(customer => (
+                                  <option key={customer.id} value={customer.id}>
+                                    {customer.name} - {customer.phone}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 bg-gray-50 p-3 rounded">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium">New Customer</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setShowCustomerForm(false)
+                                    setCustomerForm({
+                                      name: '',
+                                      phone: '',
+                                      email: '',
+                                      gstin: '',
+                                      address: '',
+                                      city: '',
+                                      state: '',
+                                      pincode: ''
+                                    })
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <Input
+                                placeholder="Customer Name *"
+                                value={customerForm.name}
+                                onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
+                              />
+                              <Input
+                                placeholder="Phone Number *"
+                                value={customerForm.phone}
+                                onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
+                              />
+                              <Input
+                                placeholder="Email"
+                                type="email"
+                                value={customerForm.email}
+                                onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
+                              />
+                              <Input
+                                placeholder="Address"
+                                value={customerForm.address}
+                                onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  placeholder="City"
+                                  value={customerForm.city}
+                                  onChange={(e) => setCustomerForm({...customerForm, city: e.target.value})}
+                                />
+                                <Input
+                                  placeholder="State"
+                                  value={customerForm.state}
+                                  onChange={(e) => setCustomerForm({...customerForm, state: e.target.value})}
+                                />
+                              </div>
+                              <Input
+                                placeholder="Pincode"
+                                value={customerForm.pincode}
+                                onChange={(e) => setCustomerForm({...customerForm, pincode: e.target.value})}
+                              />
+                              <Input
+                                placeholder="GSTIN (Optional)"
+                                value={customerForm.gstin}
+                                onChange={(e) => setCustomerForm({...customerForm, gstin: e.target.value})}
+                              />
+                            </div>
+                          )}
+
+                          {selectedCustomer && !showCustomerForm && (
+                            <div className="text-xs text-gray-600 bg-green-50 p-2 rounded">
+                              <strong>Selected:</strong> {selectedCustomer.name}<br/>
+                              <strong>Phone:</strong> {selectedCustomer.phone}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
