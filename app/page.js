@@ -628,24 +628,14 @@ export default function App() {
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">GSTIN</label>
-                    <Input
-                      value={companyForm.gstin}
-                      onChange={(e) => setCompanyForm({...companyForm, gstin: e.target.value})}
-                      placeholder="29ABCDE1234F1Z5"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Phone *</label>
-                    <Input
-                      value={companyForm.phone}
-                      onChange={(e) => setCompanyForm({...companyForm, phone: e.target.value})}
-                      placeholder="9876543210"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="text-sm font-medium">Phone *</label>
+                  <Input
+                    value={companyForm.phone}
+                    onChange={(e) => setCompanyForm({...companyForm, phone: e.target.value})}
+                    placeholder="9876543210"
+                    required
+                  />
                 </div>
                 
                 <div>
