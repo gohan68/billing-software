@@ -34,6 +34,14 @@ export default function App() {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [selectedBalance, setSelectedBalance] = useState(null)
   
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importData, setImportData] = useState([])
+  const [importPreview, setImportPreview] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResults, setImportResults] = useState(null)
+  
   const [productForm, setProductForm] = useState({
     sku: '',
     name: '',
