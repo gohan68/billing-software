@@ -920,7 +920,7 @@ export default function App() {
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <div className="font-medium text-sm">{item.productName}</div>
-                              <div className="text-xs text-gray-500">₹{item.unitPrice} × {item.taxRate}% tax</div>
+                              <div className="text-xs text-gray-500">₹{item.unitPrice} per item</div>
                             </div>
                             <Button
                               size="sm"
@@ -951,7 +951,7 @@ export default function App() {
                             >
                               +
                             </Button>
-                            <div className="ml-auto font-bold">₹{(item.unitPrice * item.quantity * (1 + item.taxRate/100)).toFixed(2)}</div>
+                            <div className="ml-auto font-bold">₹{(item.unitPrice * item.quantity).toFixed(2)}</div>
                           </div>
                         </div>
                       ))
