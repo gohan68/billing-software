@@ -1754,10 +1754,11 @@ export default function App() {
                       className="hidden"
                       id="excel-upload"
                     />
-                    <label htmlFor="excel-upload" className="inline-block">
-                      <span className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer">
+                    <label htmlFor="excel-upload" className="inline-block cursor-pointer">
+                      <div className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 h-10 px-6 py-2">
+                        <Upload className="w-4 h-4 mr-2" />
                         Select Excel File
-                      </span>
+                      </div>
                     </label>
                   </div>
                   
