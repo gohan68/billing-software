@@ -263,13 +263,50 @@ export default function App() {
       return
     }
     
+    // Validate Credit sales require customer
+    if (paymentMode === 'Credit') {
+      if (showCustomerForm) {
+        // Creating new customer
+        if (!customerForm.name || !customerForm.phone) {
+          alert('Please fill customer name and phone number for credit sales')
+          return
+        }
+      } else if (!selectedCustomer) {
+        alert('Please select a customer or add new customer for credit sales')
+        return
+      }
+    }
+    
     try {
+      let customerId = selectedCustomer?.id
+      
+      // Create new customer if form is filled
+      if (paymentMode === 'Credit' && showCustomerForm && customerForm.name) {
+        const custRes = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...customerForm,
+            companyId: company.id
+          })
+        })
+        
+        if (custRes.ok) {
+          const newCustomer = await custRes.json()
+          customerId = newCustomer.id
+          setSelectedCustomer(newCustomer)
+        } else {
+          alert('Failed to create customer. Please try again.')
+          return
+        }
+      }
+      
       const res = await fetch('/api/invoices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyId: company.id,
-          customerId: selectedCustomer?.id,
+          customerId: customerId,
           items: cart,
           paymentMode,
           notes: ''
@@ -278,17 +315,34 @@ export default function App() {
       
       if (res.ok) {
         const invoice = await res.json()
-        alert(`Invoice ${invoice.invoiceNo} created successfully!`)
+        const message = paymentMode === 'Credit' 
+          ? `Invoice ${invoice.invoiceNo} created successfully!\nCredit balance added for customer.`
+          : `Invoice ${invoice.invoiceNo} created successfully!`
+        alert(message)
         
         // Reset
         setCart([])
         setSelectedCustomer(null)
         setPaymentMode('Cash')
+        setShowCustomerForm(false)
+        setCustomerForm({
+          name: '',
+          phone: '',
+          email: '',
+          gstin: '',
+          address: '',
+          city: '',
+          state: '',
+          pincode: ''
+        })
         loadData()
+      } else {
+        const error = await res.json()
+        alert('Error creating invoice: ' + (error.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error creating invoice:', error)
-      alert('Error creating invoice')
+      alert('Error creating invoice: ' + error.message)
     }
   }
 
