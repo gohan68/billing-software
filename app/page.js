@@ -1267,8 +1267,16 @@ export default function App() {
         <div className="max-w-7xl mx-auto p-4">
           <Card>
             <CardHeader>
-              <CardTitle>Balance Due / Credit Sales</CardTitle>
-              <CardDescription>Track customers with pending payments</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Balance Due / Credit Sales</CardTitle>
+                  <CardDescription>Track customers with pending payments</CardDescription>
+                </div>
+                <Button onClick={() => setShowImportModal(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import from Excel
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
