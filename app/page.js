@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import jsPDF from 'jspdf'
+import * as XLSX from 'xlsx'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('setup')
