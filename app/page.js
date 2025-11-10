@@ -1592,14 +1592,6 @@ export default function App() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">GSTIN</label>
-                  <Input
-                    value={customerForm.gstin}
-                    onChange={(e) => setCustomerForm({...customerForm, gstin: e.target.value})}
-                    placeholder="29ABCDE1234F1Z5"
-                  />
-                </div>
-                <div>
                   <label className="text-sm font-medium">Address</label>
                   <Input
                     value={customerForm.address}
