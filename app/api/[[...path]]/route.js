@@ -804,11 +804,8 @@ Please clear your payment. Thank you!`
           const invoiceNo = `INV-${String(invoiceCounter).padStart(6, '0')}`
           invoiceCounter++
           
-          // Create invoice for the balance
+          // Create invoice for the balance (no GST)
           const invoiceAmount = parseFloat(amount)
-          const taxRate = 18 // Default 18% GST
-          const subtotal = invoiceAmount / (1 + taxRate / 100)
-          const taxAmount = invoiceAmount - subtotal
           
           const { data: invoice, error: invoiceError } = await supabase
             .from('invoices')
@@ -817,10 +814,10 @@ Please clear your payment. Thank you!`
               customerId: customer.id,
               invoiceNo,
               invoiceDate: new Date().toISOString(),
-              subtotal,
-              taxAmount,
-              cgstAmount: taxAmount / 2,
-              sgstAmount: taxAmount / 2,
+              subtotal: invoiceAmount,
+              taxAmount: 0,
+              cgstAmount: 0,
+              sgstAmount: 0,
               igstAmount: 0,
               totalAmount: invoiceAmount,
               paymentMode: 'Credit',
@@ -847,9 +844,9 @@ Please clear your payment. Thank you!`
               productName: 'Previous Balance',
               hsn: '',
               quantity: 1,
-              unitPrice: subtotal,
-              taxRate,
-              taxAmount,
+              unitPrice: invoiceAmount,
+              taxRate: 0,
+              taxAmount: 0,
               lineTotal: invoiceAmount
             }])
           
