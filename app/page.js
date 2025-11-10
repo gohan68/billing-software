@@ -265,7 +265,7 @@ export default function App() {
     
     // Validate Credit sales require customer
     if (paymentMode === 'Credit') {
-      if (showCustomerForm) {
+      if (showInlineCustomerForm) {
         // Creating new customer
         if (!customerForm.name || !customerForm.phone) {
           alert('Please fill customer name and phone number for credit sales')
@@ -281,7 +281,7 @@ export default function App() {
       let customerId = selectedCustomer?.id
       
       // Create new customer if form is filled
-      if (paymentMode === 'Credit' && showCustomerForm && customerForm.name) {
+      if (paymentMode === 'Credit' && showInlineCustomerForm && customerForm.name) {
         const custRes = await fetch('/api/customers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
