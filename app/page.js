@@ -1054,11 +1054,6 @@ export default function App() {
                                 value={customerForm.pincode}
                                 onChange={(e) => setCustomerForm({...customerForm, pincode: e.target.value})}
                               />
-                              <Input
-                                placeholder="GSTIN (Optional)"
-                                value={customerForm.gstin}
-                                onChange={(e) => setCustomerForm({...customerForm, gstin: e.target.value})}
-                              />
                             </div>
                           )}
 
