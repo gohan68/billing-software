@@ -161,7 +161,7 @@ export default function App() {
           unitPrice: parseFloat(productForm.unitPrice),
           purchasePrice: parseFloat(productForm.purchasePrice || 0),
           stock: parseInt(productForm.stock),
-          taxRate: parseFloat(productForm.taxRate)
+          taxRate: 0
         })
       })
       
