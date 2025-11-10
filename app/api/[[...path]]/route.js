@@ -6,26 +6,15 @@ import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 
-// Helper: Calculate GST based on states
+// Helper: No GST calculation (for non-GST businesses)
 function calculateGST(subtotal, taxRate, companyState, customerState) {
-  const taxAmount = (subtotal * taxRate) / 100
-  
-  if (companyState && customerState && companyState.toLowerCase() === customerState.toLowerCase()) {
-    return {
-      taxAmount,
-      cgstAmount: taxAmount / 2,
-      sgstAmount: taxAmount / 2,
-      igstAmount: 0,
-      taxType: 'CGST+SGST'
-    }
-  }
-  
+  // Return zero GST for all invoices
   return {
-    taxAmount,
+    taxAmount: 0,
     cgstAmount: 0,
     sgstAmount: 0,
-    igstAmount: taxAmount,
-    taxType: 'IGST'
+    igstAmount: 0,
+    taxType: 'None'
   }
 }
 
