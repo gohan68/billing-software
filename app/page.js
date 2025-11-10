@@ -1138,7 +1138,6 @@ export default function App() {
                       <th className="text-left p-2">HSN</th>
                       <th className="text-left p-2">Price</th>
                       <th className="text-left p-2">Stock</th>
-                      <th className="text-left p-2">Tax Rate</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1153,7 +1152,6 @@ export default function App() {
                             {product.stock}
                           </Badge>
                         </td>
-                        <td className="p-2">{product.taxRate}%</td>
                       </tr>
                     ))}
                   </tbody>
