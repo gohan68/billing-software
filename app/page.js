@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Package, Users, FileText, BarChart3, Settings, Plus, Search, X, Trash2, Save, Download, Eye } from 'lucide-react'
+import { ShoppingCart, Package, Users, FileText, BarChart3, Settings, Plus, Search, X, Trash2, Save, Download, Eye, Upload, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
