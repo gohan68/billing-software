@@ -371,8 +371,8 @@ export default function App() {
       doc.setFontSize(16)
       doc.text('INVOICE', 150, 20)
       doc.setFontSize(10)
-      doc.text(`Invoice No: ${invoice.invoiceNo}`, 150, 28)
-      doc.text(`Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}`, 150, 33)
+      doc.text(`Invoice No: ${invoice.invoiceNo}`, 150, 26)
+      doc.text(`Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}`, 150, 31)
       
       // Customer details
       doc.setFontSize(12)
