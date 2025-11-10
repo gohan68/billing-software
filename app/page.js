@@ -1045,49 +1045,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Customers Management */}
-      {currentPage === 'customers' && (
-        <div className="max-w-7xl mx-auto p-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Customers Management</CardTitle>
-                <Button onClick={() => setShowCustomerForm(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Customer
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Name</th>
-                      <th className="text-left p-2">Phone</th>
-                      <th className="text-left p-2">Email</th>
-                      <th className="text-left p-2">GSTIN</th>
-                      <th className="text-left p-2">State</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customers.map(customer => (
-                      <tr key={customer.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-medium">{customer.name}</td>
-                        <td className="p-2">{customer.phone}</td>
-                        <td className="p-2">{customer.email}</td>
-                        <td className="p-2">{customer.gstin || '-'}</td>
-                        <td className="p-2">{customer.state || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Invoices List */}
       {currentPage === 'invoices' && (
         <div className="max-w-7xl mx-auto p-4">
