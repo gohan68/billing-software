@@ -455,6 +455,128 @@ export default function App() {
     }
   }
 
+  // Excel Import Functions
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    setImportFile(file)
+    const reader = new FileReader()
+    
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result)
+        const workbook = XLSX.read(data, { type: 'array' })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+        
+        // Parse the data - skip header rows and extract customer info
+        const parsed = []
+        
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i]
+          
+          // Skip empty rows or header rows
+          if (!row || row.length === 0) continue
+          
+          // Try to find customer name and phone pattern
+          // Based on the Excel analysis: customer names are followed by phone numbers
+          const customerText = String(row[0] || '').trim()
+          
+          // Skip title rows and headers
+          if (customerText.includes('Due Balance Statement') || 
+              customerText.includes('CUSTOMER') ||
+              customerText === 'TOTAL' ||
+              customerText === '') continue
+          
+          // Extract customer name (remove LOCAL CUSTOMER prefix if present)
+          let customerName = customerText.replace(/LOCAL CUSTOMER\s*/i, '').trim()
+          
+          // Try to find phone number in the row
+          let phone = null
+          let amount = 0
+          
+          // Check each cell for a phone-like number (8-10 digits)
+          for (let j = 0; j < row.length; j++) {
+            const cell = String(row[j] || '').trim()
+            
+            // Check if it's a phone number (8-10 digits)
+            if (/^\d{8,10}$/.test(cell) && !phone) {
+              phone = cell
+            }
+            
+            // Check if it's an amount (numeric value > 10)
+            const numValue = parseFloat(cell)
+            if (!isNaN(numValue) && numValue > 10 && amount === 0) {
+              amount = numValue
+            }
+          }
+          
+          // If we have at least a name and amount, add it
+          if (customerName && amount > 0) {
+            parsed.push({
+              customerName,
+              phone,
+              amount
+            })
+          }
+        }
+        
+        setImportData(parsed)
+        setImportPreview(true)
+      } catch (error) {
+        alert('Error parsing Excel file: ' + error.message)
+      }
+    }
+    
+    reader.readAsArrayBuffer(file)
+  }
+
+  const handleImportConfirm = async () => {
+    if (importData.length === 0) {
+      alert('No data to import')
+      return
+    }
+    
+    setImporting(true)
+    
+    try {
+      const res = await fetch('/api/balances/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: company.id,
+          data: importData
+        })
+      })
+      
+      const results = await res.json()
+      
+      if (res.ok) {
+        setImportResults(results)
+        setImportPreview(false)
+        
+        // Reload data
+        loadData()
+      } else {
+        alert('Import failed: ' + (results.error || 'Unknown error'))
+      }
+    } catch (error) {
+      alert('Error importing data: ' + error.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const resetImport = () => {
+    setShowImportModal(false)
+    setImportFile(null)
+    setImportData([])
+    setImportPreview(false)
+    setImportResults(null)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
