@@ -982,7 +982,7 @@ Please clear your payment. Thank you!`
       
       // If payment mode is Credit, create balance record
       if (finalPaymentMode === 'Credit' && customerId) {
-        const totalAmount = subtotal + gst.taxAmount
+        const totalAmount = subtotal
         
         const { error: balanceError } = await supabase
           .from('balances')
