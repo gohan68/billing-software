@@ -799,8 +799,12 @@ Please clear your payment. Thank you!`
         
         if (balanceError) {
           console.error('Error creating balance:', balanceError)
-          // Don't fail the invoice creation if balance creation fails
+          console.error('Balance error details:', JSON.stringify(balanceError))
+          // Still return success but log the error
+          // The invoice is created, balance will need to be added manually if this fails
         }
+      } else if (finalPaymentMode === 'Credit' && !customerId) {
+        console.warn('Credit sale without customer ID - balance not created')
       }
       
       // Create invoice items
