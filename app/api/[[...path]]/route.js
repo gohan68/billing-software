@@ -958,7 +958,7 @@ Please clear your payment. Thank you!`
       const finalPaymentMode = paymentMode || 'Cash'
       const invoiceStatus = finalPaymentMode === 'Credit' ? 'Pending' : 'Paid'
       
-      // Create invoice
+      // Create invoice (no GST)
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
@@ -966,11 +966,11 @@ Please clear your payment. Thank you!`
           customerId: customerId || null,
           invoiceNo,
           subtotal,
-          taxAmount: gst.taxAmount,
-          cgstAmount: gst.cgstAmount,
-          sgstAmount: gst.sgstAmount,
-          igstAmount: gst.igstAmount,
-          totalAmount: subtotal + gst.taxAmount,
+          taxAmount: 0,
+          cgstAmount: 0,
+          sgstAmount: 0,
+          igstAmount: 0,
+          totalAmount: subtotal,
           paymentMode: finalPaymentMode,
           status: invoiceStatus,
           notes
