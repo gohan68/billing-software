@@ -572,14 +572,6 @@ export default function App() {
                 Products
               </Button>
               <Button
-                variant={currentPage === 'customers' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentPage('customers')}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Customers
-              </Button>
-              <Button
                 variant={currentPage === 'invoices' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setCurrentPage('invoices')}
