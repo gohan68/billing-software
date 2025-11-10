@@ -1577,28 +1577,15 @@ export default function App() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Stock Quantity *</label>
-                    <Input
-                      type="number"
-                      value={productForm.stock}
-                      onChange={(e) => setProductForm({...productForm, stock: e.target.value})}
-                      placeholder="50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Tax Rate (%) *</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={productForm.taxRate}
-                      onChange={(e) => setProductForm({...productForm, taxRate: e.target.value})}
-                      placeholder="18"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="text-sm font-medium">Stock Quantity *</label>
+                  <Input
+                    type="number"
+                    value={productForm.stock}
+                    onChange={(e) => setProductForm({...productForm, stock: e.target.value})}
+                    placeholder="50"
+                    required
+                  />
                 </div>
                 <Button type="submit" className="w-full">
                   <Plus className="w-4 h-4 mr-2" />
