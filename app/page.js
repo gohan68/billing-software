@@ -49,7 +49,7 @@ export default function App() {
     unitPrice: '',
     purchasePrice: '',
     stock: '',
-    taxRate: '18'
+    taxRate: '0'
   })
   
   const [customerForm, setCustomerForm] = useState({
