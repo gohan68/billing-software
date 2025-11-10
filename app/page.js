@@ -365,8 +365,7 @@ export default function App() {
       doc.setFontSize(10)
       doc.text(invoice.companies.address, 20, 28)
       doc.text(`${invoice.companies.city}, ${invoice.companies.state} - ${invoice.companies.pincode}`, 20, 33)
-      doc.text(`GSTIN: ${invoice.companies.gstin}`, 20, 38)
-      doc.text(`Phone: ${invoice.companies.phone}`, 20, 43)
+      doc.text(`Phone: ${invoice.companies.phone}`, 20, 38)
       
       // Invoice details
       doc.setFontSize(16)
