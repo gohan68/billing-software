@@ -866,7 +866,6 @@ export default function App() {
                             <span className="text-lg font-bold text-blue-600">₹{product.unitPrice}</span>
                             <Badge variant="secondary">{product.stock} in stock</Badge>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">Tax: {product.taxRate}%</div>
                         </button>
                       ))
                     }
