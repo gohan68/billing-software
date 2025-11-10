@@ -382,7 +382,6 @@ export default function App() {
         doc.text(invoice.customers.name, 20, 62)
         if (invoice.customers.address) doc.text(invoice.customers.address, 20, 67)
         if (invoice.customers.phone) doc.text(`Phone: ${invoice.customers.phone}`, 20, 72)
-        if (invoice.customers.gstin) doc.text(`GSTIN: ${invoice.customers.gstin}`, 20, 77)
       } else {
         doc.text('Walk-in Customer', 20, 62)
       }
