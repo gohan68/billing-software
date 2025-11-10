@@ -1808,6 +1808,182 @@ export default function App() {
           </Card>
         </div>
       )}
+
+      {/* Import Excel Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Import Balances from Excel</CardTitle>
+                <Button size="sm" variant="ghost" onClick={resetImport}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* File Upload */}
+              {!importPreview && !importResults && (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-lg font-medium mb-2">Upload Excel File</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Upload your balance due statement Excel file (.xlsx)
+                    </p>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="excel-upload"
+                    />
+                    <label htmlFor="excel-upload">
+                      <Button as="span" className="cursor-pointer">
+                        Select Excel File
+                      </Button>
+                    </label>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                    <h4 className="font-medium text-blue-900 mb-2">📋 File Format Instructions</h4>
+                    <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                      <li>File should contain customer names, phone numbers, and amounts</li>
+                      <li>Customer names and phone numbers will be automatically detected</li>
+                      <li>System will create customers if they don't exist</li>
+                      <li>Invoices will be automatically generated for each balance</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+              
+              {/* Preview Data */}
+              {importPreview && !importResults && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded p-4">
+                    <div>
+                      <h4 className="font-medium text-green-900">File Parsed Successfully</h4>
+                      <p className="text-sm text-green-700">Found {importData.length} records to import</p>
+                    </div>
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  
+                  <div className="border rounded max-h-96 overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr className="border-b">
+                          <th className="text-left p-2 text-sm font-medium">#</th>
+                          <th className="text-left p-2 text-sm font-medium">Customer Name</th>
+                          <th className="text-left p-2 text-sm font-medium">Phone</th>
+                          <th className="text-left p-2 text-sm font-medium">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importData.map((row, idx) => (
+                          <tr key={idx} className="border-b hover:bg-gray-50">
+                            <td className="p-2 text-sm">{idx + 1}</td>
+                            <td className="p-2 text-sm font-medium">{row.customerName}</td>
+                            <td className="p-2 text-sm">{row.phone || '-'}</td>
+                            <td className="p-2 text-sm font-bold text-green-600">₹{row.amount.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={resetImport} 
+                      variant="outline" 
+                      className="flex-1"
+                      disabled={importing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleImportConfirm} 
+                      className="flex-1"
+                      disabled={importing}
+                    >
+                      {importing ? 'Importing...' : `Import ${importData.length} Records`}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Import Results */}
+              {importResults && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-green-50 border border-green-200 rounded p-4">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                        <div>
+                          <p className="text-2xl font-bold text-green-900">{importResults.success}</p>
+                          <p className="text-sm text-green-700">Successfully Imported</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-red-50 border border-red-200 rounded p-4">
+                      <div className="flex items-center gap-3">
+                        <XCircle className="w-8 h-8 text-red-600" />
+                        <div>
+                          <p className="text-2xl font-bold text-red-900">{importResults.failed}</p>
+                          <p className="text-sm text-red-700">Failed to Import</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {importResults.created && importResults.created.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Successfully Created:</h4>
+                      <div className="border rounded max-h-48 overflow-y-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 sticky top-0">
+                            <tr className="border-b">
+                              <th className="text-left p-2">Customer</th>
+                              <th className="text-left p-2">Invoice No</th>
+                              <th className="text-left p-2">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importResults.created.map((item, idx) => (
+                              <tr key={idx} className="border-b">
+                                <td className="p-2">{item.customerName}</td>
+                                <td className="p-2">{item.invoiceNo}</td>
+                                <td className="p-2 font-bold text-green-600">₹{item.amount.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {importResults.errors && importResults.errors.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-red-900">Errors:</h4>
+                      <div className="border border-red-200 rounded max-h-48 overflow-y-auto bg-red-50">
+                        {importResults.errors.map((err, idx) => (
+                          <div key={idx} className="p-2 border-b last:border-b-0 text-sm">
+                            <span className="font-medium">{err.row}:</span> {err.error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button onClick={resetImport} className="w-full">
+                    Close
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
