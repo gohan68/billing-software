@@ -324,7 +324,7 @@ export default function App() {
         setCart([])
         setSelectedCustomer(null)
         setPaymentMode('Cash')
-        setShowCustomerForm(false)
+        setShowInlineCustomerForm(false)
         setCustomerForm({
           name: '',
           phone: '',
